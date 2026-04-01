@@ -99,7 +99,6 @@ body{font-family:system-ui,sans-serif;background:#f5f4f0;color:#1a1a1a;min-heigh
   </div>
 </div>
 <script>
-const ANTHROPIC_API_KEY = '';
 
 let data = JSON.parse(localStorage.getItem('cl_app') || '{"lists":[]}');
 let aiSuggestions = [];
@@ -160,12 +159,6 @@ async function showAiSuggestions() {
     alert('הגעת למגבלת 10 בקשות AI ליום. נסה מחר.');
     return;
   }
-  if (!ANTHROPIC_API_KEY) {
-    document.getElementById('ai-panel').style.display = 'block';
-    document.getElementById('ai-content').innerHTML = '<div class="ai-error">מפתח API חסר. הגדר את ANTHROPIC_API_KEY בקובץ.</div>';
-    return;
-  }
-
   const panel = document.getElementById('ai-panel');
   const content = document.getElementById('ai-content');
   const usageLabel = document.getElementById('ai-usage-label');
@@ -175,33 +168,17 @@ async function showAiSuggestions() {
   aiSuggestions = [];
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/suggest', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 256,
-        messages: [{
-          role: 'user',
-          content: `אתה עוזר לניהול רשימות. המשתמש יוצר רשימה בשם: "${name}". הצע בדיוק 8 פריטים מתאימים לרשימה זו בעברית. החזר רק את הפריטים, כל פריט בשורה נפרדת, ללא מספרים, ללא נקודות, ללא הסברים.`
-        }]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listName: name })
     });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || `שגיאת API: ${res.status}`);
-    }
-
     const json = await res.json();
+    if (!res.ok) throw new Error(json.error || `שגיאת API: ${res.status}`);
+
     incrementUsage();
-    const lines = json.content[0].text.trim().split('\n').map(l => l.trim()).filter(l => l).slice(0, 8);
-    aiSuggestions = lines.map(text => ({ text, selected: true }));
+    aiSuggestions = json.suggestions.map(text => ({ text, selected: true }));
 
     usageLabel.textContent = `נותרו ${getRemainingUsage()} מתוך 10 בקשות היום`;
     renderSuggestions(content);
