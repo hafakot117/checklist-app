@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הרשימות שלי</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f4f0;color:#1a1a1a;min-height:100vh}
+.header{background:#1a1a1a;color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:18px;font-weight:500}
+.tabs{display:flex;gap:4px}
+.tab{padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;background:transparent;color:#aaa}
+.tab.active{background:#fff;color:#1a1a1a}
+.container{max-width:640px;margin:24px auto;padding:0 16px}
+.list-card{background:#fff;border:1px solid #e5e3de;border-radius:12px;padding:16px;margin-bottom:14px}
+.list-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.list-title{font-size:15px;font-weight:500}
+.items-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.item-row{display:flex;align-items:center;gap:8px;background:#f9f8f6;border:1px solid #e5e3de;border-radius:6px;padding:6px 10px}
+.item-row input[type=text]{flex:1;border:none;background:none;font-size:13px;color:#1a1a1a;outline:none}
+.btn-del{background:none;border:none;cursor:pointer;color:#aaa;font-size:18px;line-height:1;padding:0 4px}
+.btn-del:hover{color:#e24b4a}
+.add-item-row{display:flex;gap:8px}
+.add-item-row input{flex:1;border:1px solid #e5e3de;border-radius:6px;padding:7px 10px;font-size:13px;background:#f9f8f6;outline:none}
+.btn{border:none;border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:500}
+.btn-primary{background:#1a1a1a;color:#fff}
+.btn-secondary{background:#f5f4f0;border:1px solid #e5e3de;color:#1a1a1a}
+.btn-danger{background:#fee2e2;color:#991b1b}
+.new-list-form{background:#f9f8f6;border:1px dashed #ccc;border-radius:12px;padding:14px;margin-bottom:14px}
+.new-list-form input{width:100%;border:1px solid #e5e3de;border-radius:6px;padding:8px 12px;font-size:14px;background:#fff;outline:none;margin-bottom:10px}
+.fl-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:background .1s}
+.fl-item:hover{background:#f9f8f6;border-color:#e5e3de}
+.fl-item.done .fl-item-text{text-decoration:line-through;color:#aaa}
+.fl-item.done{opacity:.6}
+.checkbox{width:18px;height:18px;border:2px solid #ccc;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.fl-item.done .checkbox{background:#3b6d11;border-color:#3b6d11}
+.checkmark{width:10px;height:7px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px);opacity:0;transition:opacity .15s}
+.fl-item.done .checkmark{opacity:1}
+.fl-item-text{font-size:14px}
+.progress-wrap{width:80px;height:5px;background:#e5e3de;border-radius:3px;overflow:hidden}
+.progress-bar{height:100%;background:#3b6d11;border-radius:3px;transition:width .3s}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.top-bar h2{font-size:14px;font-weight:500;color:#888}
+.empty{text-align:center;color:#aaa;font-size:13px;padding:32px 0}
+.reset-btn{font-size:12px;color:#aaa;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px}
+.reset-btn:hover{background:#f5f4f0;color:#1a1a1a}
+.panel{display:none}.panel.active{display:block}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>הרשימות שלי</h1>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('admin')">Admin</button>
+    <button class="tab" onclick="switchTab('frontend')">ביצוע</button>
+  </div>
+</div>
+<div class="container">
+  <div id="tab-admin" class="panel active">
+    <div class="top-bar">
+      <h2>הרשימות שלי</h2>
+      <button class="btn btn-primary" onclick="showNewListForm()">+ רשימה חדשה</button>
+    </div>
+    <div id="new-list-form" style="display:none" class="new-list-form">
+      <input id="new-list-name" placeholder="שם הרשימה (למשל: ציוד לצילום)" />
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="createList()">צור</button>
+        <button class="btn btn-secondary" onclick="hideNewListForm()">ביטול</button>
+      </div>
+    </div>
+    <div id="admin-lists"></div>
+  </div>
+  <div id="tab-frontend" class="panel">
+    <div class="top-bar"><h2>מה צריך לעשות?</h2></div>
+    <div id="frontend-lists"></div>
+  </div>
+</div>
+<script>
+let data=JSON.parse(localStorage.getItem('cl_app')||'{"lists":[]}');
+function save(){localStorage.setItem('cl_app',JSON.stringify(data))}
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['admin','frontend'][i]===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  t==='frontend'?renderFrontend():renderAdmin();
+}
+function showNewListForm(){document.getElementById('new-list-form').style.display='block';document.getElementById('new-list-name').focus()}
+function hideNewListForm(){document.getElementById('new-list-form').style.display='none';document.getElementById('new-list-name').value=''}
+function createList(){
+  const name=document.getElementById('new-list-name').value.trim();
+  if(!name)return;
+  data.lists.push({id:Date.now(),name,items:[],checks:{}});
+  save();hideNewListForm();renderAdmin();
+}
+function deleteList(id){if(!confirm('למחוק?'))return;data.lists=data.lists.filter(l=>l.id!==id);save();renderAdmin()}
+function addItem(id){
+  const inp=document.getElementById('ni-'+id);
+  const txt=inp.value.trim();if(!txt)return;
+  data.lists.find(l=>l.id===id).items.push({id:Date.now(),text:txt});
+  inp.value='';save();renderAdmin();
+}
+function deleteItem(lid,iid){const l=data.lists.find(l=>l.id===lid);l.items=l.items.filter(i=>i.id!==iid);save();renderAdmin()}
+function updateItem(lid,iid,v){data.lists.find(l=>l.id===lid).items.find(i=>i.id===iid).text=v;save()}
+function toggleCheck(lid,iid){const l=data.lists.find(l=>l.id===lid);l.checks=l.checks||{};l.checks[iid]=!l.checks[iid];save();renderFrontend()}
+function resetList(lid){data.lists.find(l=>l.id===lid).checks={};save();renderFrontend()}
+function renderAdmin(){
+  const el=document.getElementById('admin-lists');
+  if(!data.lists.length){el.innerHTML='<div class="empty">עדיין אין רשימות</div>';return}
+  el.innerHTML=data.lists.map(l=>`<div class="list-card">
+    <div class="list-header">
+      <span class="list-title">${l.name}</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:12px;color:#aaa">${l.items.length} פריטים</span>
+        <button class="btn btn-danger" onclick="deleteList(${l.id})">מחק</button>
+      </div>
+    </div>
+    <div class="items-list">${l.items.map(i=>`<div class="item-row">
+      <input type="text" value="${i.text}" onchange="updateItem(${l.id},${i.id},this.value)"/>
+      <button class="btn-del" onclick="deleteItem(${l.id},${i.id})">×</button>
+    </div>`).join('')}</div>
+    <div class="add-item-row">
+      <input id="ni-${l.id}" placeholder="הוסף פריט..." onkeydown="if(event.key==='Enter')addItem(${l.id})"/>
+      <button class="btn btn-secondary" onclick="addItem(${l.id})">הוסף</button>
+    </div>
+  </div>`).join('');
+}
+function renderFrontend(){
+  const el=document.getElementById('frontend-lists');
+  if(!data.lists.length){el.innerHTML='<div class="empty">עבור ל-Admin וצור רשימה</div>';return}
+  el.innerHTML=data.lists.map(l=>{
+    const c=l.checks||{},done=l.items.filter(i=>c[i.id]).length,pct=l.items.length?Math.round(done/l.items.length*100):0;
+    return`<div class="list-card">
+      <div class="list-header">
+        <span class="list-title">${l.name}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:#aaa">${done}/${l.items.length}</span>
+          <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+          <button class="reset-btn" onclick="resetList(${l.id})">איפוס</button>
+        </div>
+      </div>
+      ${l.items.length?l.items.map(i=>`<div class="fl-item${c[i.id]?' done':''}" onclick="toggleCheck(${l.id},${i.id})">
+        <div class="checkbox"><div class="checkmark"></div></div>
+        <span class="fl-item-text">${i.text}</span>
+      </div>`).join(''):'<div class="empty">אין פריטים</div>'}
+    </div>`;
+  }).join('');
+}
+renderAdmin();
+</script>
+</body>
+</html>
+
