@@ -30,6 +30,8 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState('')
   const [userId, setUserId] = useState('')
   const [expandedList, setExpandedList] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<Record<string, string[]>>({})
+  const [suggestionsLoading, setSuggestionsLoading] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -53,17 +55,35 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
+  const fetchSuggestions = async (checklistId: string, title: string) => {
+    setSuggestionsLoading(prev => ({ ...prev, [checklistId]: true }))
+    try {
+      const res = await fetch('/api/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listName: title }),
+      })
+      const json = await res.json()
+      if (json.suggestions) {
+        setSuggestions(prev => ({ ...prev, [checklistId]: json.suggestions }))
+      }
+    } catch {}
+    setSuggestionsLoading(prev => ({ ...prev, [checklistId]: false }))
+  }
+
   const addChecklist = async () => {
     if (!newTitle.trim()) return
+    const title = newTitle.trim()
     const { data, error } = await supabase
       .from('checklists')
-      .insert({ title: newTitle.trim(), user_id: userId })
+      .insert({ title, user_id: userId })
       .select('*, checklist_items(*)')
       .single()
     if (!error && data) {
       setChecklists([data as Checklist, ...checklists])
       setNewTitle('')
       setExpandedList(data.id)
+      fetchSuggestions(data.id, title)
     }
   }
 
@@ -87,6 +107,25 @@ export default function DashboardPage() {
           : c
       ))
       setNewItems({ ...newItems, [checklistId]: '' })
+    }
+  }
+
+  const addSuggestedItem = async (checklistId: string, content: string) => {
+    const { data, error } = await supabase
+      .from('checklist_items')
+      .insert({ checklist_id: checklistId, content, user_id: userId })
+      .select()
+      .single()
+    if (!error && data) {
+      setChecklists(prev => prev.map(c =>
+        c.id === checklistId
+          ? { ...c, checklist_items: [...c.checklist_items, data as ChecklistItem] }
+          : c
+      ))
+      setSuggestions(prev => ({
+        ...prev,
+        [checklistId]: prev[checklistId].filter(s => s !== content),
+      }))
     }
   }
 
@@ -177,6 +216,8 @@ export default function DashboardPage() {
             const total = checklist.checklist_items.length
             const done = checklist.checklist_items.filter(i => i.is_complete).length
             const isOpen = expandedList === checklist.id
+            const hasSuggestions = (suggestions[checklist.id]?.length ?? 0) > 0
+            const isLoadingSuggestions = suggestionsLoading[checklist.id]
 
             return (
               <div key={checklist.id} className="bg-white rounded-2xl shadow-md overflow-hidden">
@@ -214,7 +255,7 @@ export default function DashboardPage() {
                 {/* Items */}
                 {isOpen && (
                   <div className="px-5 py-3 space-y-2">
-                    {checklist.checklist_items.length === 0 && (
+                    {checklist.checklist_items.length === 0 && !isLoadingSuggestions && !hasSuggestions && (
                       <p className="text-gray-400 text-sm text-center py-2">No items yet. Add one below!</p>
                     )}
                     {checklist.checklist_items.map(item => (
@@ -239,6 +280,28 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     ))}
+
+                    {/* AI Suggestions */}
+                    {(isLoadingSuggestions || hasSuggestions) && (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-xs text-indigo-400 font-medium mb-2">✨ AI suggestions</p>
+                        {isLoadingSuggestions ? (
+                          <p className="text-xs text-gray-400">Generating suggestions...</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {suggestions[checklist.id].map(suggestion => (
+                              <button
+                                key={suggestion}
+                                onClick={() => addSuggestedItem(checklist.id, suggestion)}
+                                className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2.5 py-1 rounded-full transition-colors"
+                              >
+                                + {suggestion}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Add item input */}
                     <div className="flex gap-2 mt-3">
