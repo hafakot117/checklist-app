@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [newItems, setNewItems] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [userEmail, setUserEmail] = useState('')
+  const [userId, setUserId] = useState('')
   const [expandedList, setExpandedList] = useState<string | null>(null)
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function DashboardPage() {
         router.push('/')
       } else {
         setUserEmail(session.user.email ?? '')
+        setUserId(session.user.id)
         fetchChecklists()
       }
     })
@@ -55,7 +57,7 @@ export default function DashboardPage() {
     if (!newTitle.trim()) return
     const { data, error } = await supabase
       .from('checklists')
-      .insert({ title: newTitle.trim() })
+      .insert({ title: newTitle.trim(), user_id: userId })
       .select('*, checklist_items(*)')
       .single()
     if (!error && data) {
@@ -75,7 +77,7 @@ export default function DashboardPage() {
     if (!content) return
     const { data, error } = await supabase
       .from('checklist_items')
-      .insert({ checklist_id: checklistId, content })
+      .insert({ checklist_id: checklistId, content, user_id: userId })
       .select()
       .single()
     if (!error && data) {
