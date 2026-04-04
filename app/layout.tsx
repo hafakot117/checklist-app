@@ -1,22 +1,21 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Heebo } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const heebo = Heebo({
+  subsets: ['hebrew', 'latin'],
+  weight: ['400', '500', '600', '700'],
+})
 
 export const metadata: Metadata = {
-  title: 'CheckList App',
-  description: 'Organize your tasks with Google login and Supabase cloud storage',
+  title: 'כלים חכמים',
+  description: 'פלטפורמה לכלים חכמים',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="he" dir="rtl">
+      <body className={heebo.className}>{children}</body>
     </html>
   )
 }

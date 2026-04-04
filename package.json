@@ -9,6 +9,7 @@
     "react-dom": "^18",
     "@supabase/supabase-js": "^2.39.0",
     "@supabase/ssr": "^0.1.0",
+    "@anthropic-ai/sdk": "^0.30.0",
     "lucide-react": "^0.321.0"
   },
   "devDependencies": {

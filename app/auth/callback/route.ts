@@ -6,8 +6,6 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/dashboard'
 
-  // On Vercel, request.url uses an internal hostname that resolves to localhost.
-  // Use x-forwarded-host to get the actual public-facing domain.
   const forwardedHost = request.headers.get('x-forwarded-host')
   const siteOrigin =
     process.env.NODE_ENV === 'development' || !forwardedHost
