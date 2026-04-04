@@ -83,7 +83,7 @@ export default function ChecklistTool({ userId }: { userId: string }) {
     const position = items.length
     const { data } = await supabase
       .from('checklist_items')
-      .insert({ checklist_id: activeChecklist.id, text: newItemText.trim(), position })
+      .insert({ user_id: userId, checklist_id: activeChecklist.id, text: newItemText.trim(), position })
       .select()
       .single()
     if (data) {
@@ -97,7 +97,7 @@ export default function ChecklistTool({ userId }: { userId: string }) {
     const position = items.length
     const { data } = await supabase
       .from('checklist_items')
-      .insert({ checklist_id: activeChecklist.id, text, position })
+      .insert({ user_id: userId, checklist_id: activeChecklist.id, text, position })
       .select()
       .single()
     if (data) {
