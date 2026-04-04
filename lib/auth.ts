@@ -15,13 +15,14 @@ export async function requireProfile(): Promise<{ user: { id: string; email?: st
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  // Upsert profile (handles first login)
+  // Upsert profile (handles first login), including default role
   await supabase.from('profiles').upsert({
     id: user.id,
     email: user.email,
     full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
     avatar_url: user.user_metadata?.avatar_url ?? null,
-  }, { onConflict: 'id', ignoreDuplicates: true })
+    role: 'free',
+  }, { onConflict: 'id', ignoreDuplicates: false })
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -29,7 +30,8 @@ export async function requireProfile(): Promise<{ user: { id: string; email?: st
     .eq('id', user.id)
     .single()
 
-  if (!profile) redirect('/')
+  // If profile is still missing, something is wrong with DB/RLS — don't loop back to login
+  if (!profile) throw new Error(`Profile not found for user ${user.id}`)
   return { user, profile: profile as Profile }
 }
 
